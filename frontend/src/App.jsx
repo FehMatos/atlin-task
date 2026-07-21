@@ -1,39 +1,63 @@
-// TODO:
-// Quando o backend estiver concluído,
-// substituir a lógica local pelas funções de taskApi.js.
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Trash, Check, Undo2 } from "lucide-react";
+
+import { getTasks, createTask, updateTask, deleteTask } from "./api/taskApi";
 
 function App() {
   const [title, setTitle] = useState("");
   const [tasks, setTasks] = useState([]);
 
-  function handleCreateTask() {
+  useEffect(() => {
+    async function loadTasks() {
+      try {
+        const response = await getTasks();
+        setTasks(response.data);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    loadTasks();
+  }, []);
+
+  async function handleCreateTask() {
     if (!title.trim()) return;
 
-    const newTask = {
-      id: Date.now(),
-      title,
-      completed: false,
-    };
+    try {
+      const response = await createTask({
+        title,
+        completed: false,
+      });
 
-    setTasks((prev) => [...prev, newTask]);
-    setTitle("");
+      setTasks((prev) => [...prev, response.data]);
+      setTitle("");
+    } catch (error) {
+      console.error(error);
+    }
   }
 
-  function handleToggleTask(id) {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+  async function handleToggleTask(task) {
+    try {
+      const response = await updateTask(task.id, {
+        completed: !task.completed,
+      });
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? response.data : t))
+      );
+    } catch (error) {
+      console.error(error);
+    }
   }
 
-  function handleDeleteTask(id) {
-    setTasks((prev) => prev.filter((task) => task.id !== id));
-  }
+  async function handleDeleteTask(id) {
+    try {
+      await deleteTask(id);
 
+      setTasks((prev) => prev.filter((task) => task.id !== id));
+    } catch (error) {
+      console.error(error);
+    }
+  }
   return (
     <main className="min-h-screen bg-slate-100 flex justify-center py-16">
       <div className="w-full max-w-xl bg-white rounded-xl shadow-md p-6">
@@ -80,7 +104,7 @@ function App() {
 
               <div className="flex gap-2 ml-4 shrink-0">
                 <button
-                  onClick={() => handleToggleTask(task.id)}
+                  onClick={() => handleToggleTask(task)}
                   className={`rounded px-1 py-1 text-sm transition cursor-pointer ${
                     task.completed ? "text-black/100" : "text-green-400"
                   }`}
